@@ -1,14 +1,10 @@
 
-
 <!DOCTYPE html>
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Face Recognition System</title>
-
-  <!-- Load face-api.js -->
   <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -29,11 +25,11 @@
 <body>
   <h3>Face Recognition System</h3>
   <div id="status">Loading face-api.js...</div>
-
+  
   <input type="text" id="employeeId" placeholder="Enter Employee ID" required><br>
   <input type="text" id="fullName" placeholder="Enter Full Name" required><br>
   <button id="start" disabled>Start Camera</button><br><br>
-
+  
   <video id="video" width="320" height="240" autoplay muted></video>
   <canvas id="overlay" width="320" height="240"></canvas>
 
@@ -43,22 +39,15 @@
     const video = document.getElementById("video");
     const canvas = document.getElementById("overlay");
     const ctx = canvas.getContext("2d");
+
     let labeledDescriptors = [];
-
-    // ✅ Path to your model and image folders
     const MODEL_URL = "./model/weights/";
-    const IMAGE_PATH = "./images/"; // your images folder
+    const IMAGE_PATH = "./images/";
 
-    // ✅ Function to send recognition data to Google Sheet
+    // ✅ Send recognized data to Google Sheet
     async function sendToSheet(employeeId, fullName, imageLink) {
-      const SHEET_URL = "https://script.google.com/macros/s/AKfycbwg8S9MsAasSRsi-f_pH5wG-xVZylniONqshznzKCc2B2g33DkSCPmC31Yonmzoh8c/exec"; // 🔗 Replace with your Apps Script Web App URL
-
-      const data = {
-        employeeId,
-        fullName,
-        imageLink
-      };
-
+      const SHEET_URL = "https://script.google.com/macros/s/AKfycbwg8S9MsAasSRsi-f_pH5wG-xVZylniONqshznzKCc2B2g33DkSCPmC31Yonmzoh8c/exec";
+      const data = { employeeId, fullName, imageLink };
       try {
         await fetch(SHEET_URL, {
           method: "POST",
@@ -71,18 +60,16 @@
       }
     }
 
-    // ✅ Load face-api.js models first
+    // ✅ Load face-api.js models
     async function loadModels() {
       try {
         statusEl.textContent = "⏳ Loading models...";
-
         await Promise.all([
           faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
           faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
           faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
         ]);
-
-        statusEl.textContent = "✅ Models loaded — enter your name and start camera.";
+        statusEl.textContent = "✅ Models loaded — enter details and start camera.";
         startBtn.disabled = false;
       } catch (err) {
         statusEl.textContent = "❌ Model load error: " + err.message;
@@ -90,45 +77,41 @@
       }
     }
 
-    // ✅ Load the user's image based on the name typed
+    // ✅ Load one stored face image based on full name
     async function loadLabeledImage(fullName) {
       labeledDescriptors = [];
-      const imageName = fullName.trim(); 
-      const imgUrl = `${IMAGE_PATH}${imageName}.jpg`;
-
+      const fileName = fullName.trim();
+      const imgUrl = `${IMAGE_PATH}${fileName}.jpg`;
       try {
         const img = await faceapi.fetchImage(imgUrl);
-        const detections = await faceapi
+        const detection = await faceapi
           .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
           .withFaceLandmarks()
           .withFaceDescriptor();
-
-        if (detections) {
-          labeledDescriptors.push(
-            new faceapi.LabeledFaceDescriptors(fullName, [detections.descriptor])
-          );
-          console.log(`✅ Loaded ${fullName}'s face`);
+        if (detection) {
+          labeledDescriptors.push(new faceapi.LabeledFaceDescriptors(fullName, [detection.descriptor]));
+          console.log(`✅ Loaded stored photo for: ${fullName}`);
         } else {
-          console.warn(`⚠️ No face detected for ${fullName}`);
+          alert(`⚠️ No face detected in stored photo for ${fullName}`);
         }
       } catch (err) {
-        console.error(`Error loading image for ${fullName}:`, err);
-        alert(`❌ Could not load image for "${fullName}". Make sure ${imageName}.jpg exists in /images folder.`);
+        alert(`❌ Could not load image for "${fullName}". Ensure ${fileName}.jpg exists in /images.`);
+        console.error(err);
       }
     }
 
-    // ✅ Start camera and recognition
+    // ✅ Start camera and detect face
     startBtn.onclick = async () => {
-      const fullName = document.getElementById("fullName").value.trim();
       const employeeId = document.getElementById("employeeId").value.trim();
+      const fullName = document.getElementById("fullName").value.trim();
 
-      if (!fullName || !employeeId) {
+      if (!employeeId || !fullName) {
         alert("Please enter both Employee ID and Full Name before starting.");
         return;
       }
 
       await loadLabeledImage(fullName);
-      if (!labeledDescriptors || labeledDescriptors.length === 0) {
+      if (labeledDescriptors.length === 0) {
         alert("No labeled face loaded! Check image name or path.");
         return;
       }
@@ -137,7 +120,7 @@
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         video.srcObject = stream;
         await video.play();
-        statusEl.textContent = "🎥 Camera started — detecting faces...";
+        statusEl.textContent = "🎥 Camera started — scanning face...";
 
         const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
 
@@ -157,24 +140,26 @@
 
           const results = resized.map(d => faceMatcher.findBestMatch(d.descriptor));
 
-          // ✅ Modified loop: Send recognized data to Google Sheet
+          if (results.length === 0) {
+            statusEl.textContent = "❌ No face detected.";
+            return;
+          }
+
           results.forEach(async (result, i) => {
             const box = resized[i].detection.box;
-            const label = result.toString();
+            const label = result.label;
             const drawBox = new faceapi.draw.DrawBox(box, { label });
             drawBox.draw(canvas);
 
-            if (!label.includes("unknown")) {
-              const imageLink  = `${location.origin}/images/${fullName}.jpg`;
+            if (label !== "unknown" && label === fullName) {
               statusEl.textContent = `✅ Face recognized: ${fullName}`;
+              const imageLink = `${location.origin}/images/${fullName}.jpg`;
               await sendToSheet(employeeId, fullName, imageLink);
-            }
-            else {
-              // ❌ Face does not match anyone in /images folder
-               statusEl.textContent = "❌ No match found. Your face does not match any stored employee photo.";
+            } else if (label === "unknown" || label !== fullName) {
+              statusEl.textContent = `❌ Face does not match stored photo for "${fullName}"`;
             }
           });
-        }, 1000);
+        }, 1500);
       } catch (err) {
         statusEl.textContent = "⚠️ Camera error: " + err.message;
         console.error(err);
@@ -185,9 +170,3 @@
   </script>
 </body>
 </html>
-
-
-
-
-
-
