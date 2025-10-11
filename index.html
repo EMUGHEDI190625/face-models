@@ -51,7 +51,7 @@
 
     // ✅ Function to send recognition data to Google Sheet
     async function sendToSheet(employeeId, fullName, imageLink) {
-      const SHEET_URL = "https://script.google.com/macros/s/AKfycbzXOHrsH3Bz4YsXPTjpRH_1QzVzxSkrlXb6v5ZhO7l4hBiyN6vW1pB5rJ6LUM8IVv_q/exec"; // 🔗 Replace with your Apps Script Web App URL
+      const SHEET_URL = "https://script.google.com/macros/s/AKfycbwh-8rCn7_BXiXMiysBtR7JSVJ0stC6dWn8D-DD6drjJHYmEhf86sWDqu7SWZ-7rl8l/exec"; // 🔗 Replace with your Apps Script Web App URL
 
       const data = {
         employeeId,
@@ -165,7 +165,7 @@
             drawBox.draw(canvas);
 
             if (!label.includes("unknown")) {
-              const imageLink = `${location.origin}/images/${fullName}.jpg`;
+              const imageLink  = `${location.origin}/images/${fullName}.jpg`;
               statusEl.textContent = `✅ Face recognized: ${fullName}`;
               await sendToSheet(employeeId, fullName, imageLink);
             }
@@ -181,3 +181,4 @@
   </script>
 </body>
 </html>
+
