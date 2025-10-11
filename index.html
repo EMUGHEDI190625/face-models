@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -30,17 +31,13 @@ const startBtn = document.getElementById("start");
 const video = document.getElementById("video");
 const canvas = document.getElementById("overlay");
 const ctx = canvas.getContext("2d");
-let labeledDescriptors;
+let labeledDescriptors = [];
 
-// ✅ Replace with your staff images' Google Drive file IDs
-const fileIds = {
-  "kenoye": "./images/ECNP21.jpg",
-  "mary": "YOUR_FILE_ID_FOR_MARY"
-};
+// ✅ Path to your model and image folders
+const MODEL_URL = "./model/";
+const IMAGE_PATH = "./images/"; // Make sure your images are here
 
-// ✅ Replace with your local model folder
-const MODEL_URL = "./model/weights/";
-
+// Load face-api.js models first
 async function loadModels() {
   try {
     statusEl.textContent = "⏳ Loading models...";
@@ -51,16 +48,7 @@ async function loadModels() {
       faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
     ]);
 
-    statusEl.textContent = "✅ Models loaded — preparing known faces...";
-    await loadLabeledImages();
-
-    if (!labeledDescriptors || labeledDescriptors.length === 0) {
-      statusEl.textContent = "⚠️ No labeled faces loaded! Check your file IDs.";
-      console.error("No labeledDescriptors found!");
-      return;
-    }
-
-    statusEl.textContent = "✅ System ready — click 'Start Camera'";
+    statusEl.textContent = "✅ Models loaded — enter your name and start camera.";
     startBtn.disabled = false;
   } catch (err) {
     statusEl.textContent = "❌ Model load error: " + err.message;
@@ -68,37 +56,46 @@ async function loadModels() {
   }
 }
 
-async function loadLabeledImages() {
+// Load the user's image based on the name typed
+async function loadLabeledImage(fullName) {
   labeledDescriptors = [];
+  const imageName = fullName.trim().toLowerCase(); // safer naming
+  const imgUrl = `${IMAGE_PATH}${imageName}.jpg`;
 
-  for (const label in fileIds) {
-    const imgUrl = fileIds[label]
-    try {
-      const img = await faceapi.fetchImage(imgUrl);
-      const detections = await faceapi
-        .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
-        .withFaceLandmarks()
-        .withFaceDescriptor();
+  try {
+    const img = await faceapi.fetchImage(imgUrl);
+    const detections = await faceapi
+      .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks()
+      .withFaceDescriptor();
 
-      if (detections) {
-        labeledDescriptors.push(
-          new faceapi.LabeledFaceDescriptors(label, [detections.descriptor])
-        );
-        console.log(`Loaded ${label}'s face`);
-      } else {
-        console.warn(`No face detected for ${label}`);
-      }
-    } catch (err) {
-      console.error(`Error loading image for ${label}:`, err);
+    if (detections) {
+      labeledDescriptors.push(
+        new faceapi.LabeledFaceDescriptors(fullName, [detections.descriptor])
+      );
+      console.log(`✅ Loaded ${fullName}'s face`);
+    } else {
+      console.warn(`⚠️ No face detected for ${fullName}`);
     }
+  } catch (err) {
+    console.error(`Error loading image for ${fullName}:`, err);
+    alert(`❌ Could not load image for "${fullName}". Make sure ${imageName}.jpg exists in /images folder.`);
   }
-
-  console.log("Final labeledDescriptors:", labeledDescriptors);
 }
 
+// Start camera and recognition
 startBtn.onclick = async () => {
+  const fullName = document.getElementById("fullName").value.trim();
+  const employeeId = document.getElementById("employeeId").value.trim();
+
+  if (!fullName || !employeeId) {
+    alert("Please enter both Employee ID and Full Name before starting.");
+    return;
+  }
+
+  await loadLabeledImage(fullName);
   if (!labeledDescriptors || labeledDescriptors.length === 0) {
-    alert("No labeled faces loaded! Cannot start camera.");
+    alert("No labeled face loaded! Check image name or path.");
     return;
   }
 
