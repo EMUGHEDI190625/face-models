@@ -71,7 +71,7 @@
     // Load the user's image based on the name typed
     async function loadLabeledImage(fullName) {
       labeledDescriptors = [];
-      const imageName = fullName.trim().toUpperCase(); // convert to lowercase
+      const imageName = fullName; // convert to lowercase
       const imgUrl = `${IMAGE_PATH}${imageName}.jpg`;
 
       try {
@@ -150,4 +150,5 @@
   </script>
 </body>
 </html>
+
 
