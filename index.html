@@ -169,6 +169,10 @@
               statusEl.textContent = `✅ Face recognized: ${fullName}`;
               await sendToSheet(employeeId, fullName, imageLink);
             }
+            else {
+              // ❌ Face does not match anyone in /images folder
+               statusEl.textContent = "❌ No match found. Your face does not match any stored employee photo.";
+            }
           });
         }, 1000);
       } catch (err) {
@@ -181,6 +185,7 @@
   </script>
 </body>
 </html>
+
 
 
 
