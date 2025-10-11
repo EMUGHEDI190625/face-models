@@ -49,7 +49,29 @@
     const MODEL_URL = "./model/weights/";
     const IMAGE_PATH = "./images/"; // your images folder
 
-    // Load face-api.js models first
+    // ✅ Function to send recognition data to Google Sheet
+    async function sendToSheet(employeeId, fullName, imageLink) {
+      const SHEET_URL = "https://script.google.com/macros/s/AKfycbzXOHrsH3Bz4YsXPTjpRH_1QzVzxSkrlXb6v5ZhO7l4hBiyN6vW1pB5rJ6LUM8IVv_q/exec"; // 🔗 Replace with your Apps Script Web App URL
+
+      const data = {
+        employeeId,
+        fullName,
+        imageLink
+      };
+
+      try {
+        await fetch(SHEET_URL, {
+          method: "POST",
+          body: JSON.stringify(data),
+          headers: { "Content-Type": "application/json" },
+        });
+        console.log("✅ Data sent to Google Sheet");
+      } catch (err) {
+        console.error("❌ Error sending to sheet:", err);
+      }
+    }
+
+    // ✅ Load face-api.js models first
     async function loadModels() {
       try {
         statusEl.textContent = "⏳ Loading models...";
@@ -68,10 +90,10 @@
       }
     }
 
-    // Load the user's image based on the name typed
+    // ✅ Load the user's image based on the name typed
     async function loadLabeledImage(fullName) {
       labeledDescriptors = [];
-      const imageName = fullName.trim(); // convert to lowercase
+      const imageName = fullName.trim(); 
       const imgUrl = `${IMAGE_PATH}${imageName}.jpg`;
 
       try {
@@ -95,7 +117,7 @@
       }
     }
 
-    // Start camera and recognition
+    // ✅ Start camera and recognition
     startBtn.onclick = async () => {
       const fullName = document.getElementById("fullName").value.trim();
       const employeeId = document.getElementById("employeeId").value.trim();
@@ -134,10 +156,19 @@
           });
 
           const results = resized.map(d => faceMatcher.findBestMatch(d.descriptor));
-          results.forEach((result, i) => {
+
+          // ✅ Modified loop: Send recognized data to Google Sheet
+          results.forEach(async (result, i) => {
             const box = resized[i].detection.box;
-            const drawBox = new faceapi.draw.DrawBox(box, { label: result.toString() });
+            const label = result.toString();
+            const drawBox = new faceapi.draw.DrawBox(box, { label });
             drawBox.draw(canvas);
+
+            if (!label.includes("unknown")) {
+              const imageLink = `${location.origin}/images/${fullName}.jpg`;
+              statusEl.textContent = `✅ Face recognized: ${fullName}`;
+              await sendToSheet(employeeId, fullName, imageLink);
+            }
           });
         }, 1000);
       } catch (err) {
@@ -150,6 +181,3 @@
   </script>
 </body>
 </html>
-
-
-
