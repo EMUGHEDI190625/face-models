@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -93,7 +91,7 @@
     // ✅ Load the user's image based on the name typed
     async function loadLabeledImage(fullName) {
       labeledDescriptors = [];
-      const imageName = fullName.trim(); 
+      const imageName = fullName.trim();
       const imgUrl = `${IMAGE_PATH}${imageName}.jpg`;
 
       try {
@@ -157,17 +155,24 @@
 
           const results = resized.map(d => faceMatcher.findBestMatch(d.descriptor));
 
-          // ✅ Modified loop: Send recognized data to Google Sheet
-          results.forEach(async (result, i) => {
+          // ✅ Modified loop: Compare recognized name with entered name
+          results.forEach(async (detectionResult, i) => {
             const box = resized[i].detection.box;
-            const label = result.toString();
-            const drawBox = new faceapi.draw.DrawBox(box, { label });
+            const drawBox = new faceapi.draw.DrawBox(box, { label: detectionResult.toString() });
             drawBox.draw(canvas);
 
-            if (!label.includes("unknown")) {
-              const imageLink  = `${location.origin}/images/${fullName}.jpg`;
-              statusEl.textContent = `✅ Face recognized: ${fullName}`;
-              await sendToSheet(employeeId, fullName, imageLink);
+            // Example logic after detecting face
+            const recognizedName = detectionResult.label; // from face-api.js
+            const enteredName = document.getElementById("fullName").value.trim();
+
+            if (recognizedName === enteredName) {
+              // ✅ Only save if names match
+              const imageLink = `${location.origin}/images/${recognizedName}.jpg`;
+              statusEl.textContent = `✅ Face recognized: ${recognizedName}`;
+              await sendToSheet(employeeId, recognizedName, imageLink);
+            } else {
+              // ❌ Stop submission if mismatch
+              statusEl.textContent = "❌ Face does not match the selected employee.";
             }
           });
         }, 1000);
@@ -181,7 +186,3 @@
   </script>
 </body>
 </html>
-
-
-
-
