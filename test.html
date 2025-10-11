@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Face Recognition System</title>
+
+  <!-- Load face-api.js -->
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding: 10px; }
+    video, canvas { border: 1px solid #ccc; border-radius: 8px; margin-top: 10px; }
+    #status { margin-bottom: 10px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h3>Face Recognition System</h3>
+  <div id="status">Loading face-api.js...</div>
+
+  <input type="text" id="employeeId" placeholder="Enter Employee ID" required><br>
+  <input type="text" id="fullName" placeholder="Enter Full Name" required><br>
+  <button id="start" disabled>Start Camera</button><br><br>
+
+  <video id="video" width="320" height="240" autoplay muted></video>
+  <canvas id="overlay" width="320" height="240"></canvas>
+
+<script>
+const statusEl = document.getElementById("status");
+const startBtn = document.getElementById("start");
+const video = document.getElementById("video");
+const canvas = document.getElementById("overlay");
+const ctx = canvas.getContext("2d");
+let labeledDescriptors;
+
+// ✅ Replace with your staff images' Google Drive file IDs
+const fileIds = {
+  "kenoye": "./images/ECNP21.jpg",
+  "mary": "YOUR_FILE_ID_FOR_MARY"
+};
+
+// ✅ Replace with your local model folder
+const MODEL_URL = "./model/weights/";
+
+async function loadModels() {
+  try {
+    statusEl.textContent = "⏳ Loading models...";
+
+    await Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+      faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+      faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+    ]);
+
+    statusEl.textContent = "✅ Models loaded — preparing known faces...";
+    await loadLabeledImages();
+
+    if (!labeledDescriptors || labeledDescriptors.length === 0) {
+      statusEl.textContent = "⚠️ No labeled faces loaded! Check your file IDs.";
+      console.error("No labeledDescriptors found!");
+      return;
+    }
+
+    statusEl.textContent = "✅ System ready — click 'Start Camera'";
+    startBtn.disabled = false;
+  } catch (err) {
+    statusEl.textContent = "❌ Model load error: " + err.message;
+    console.error(err);
+  }
+}
+
+async function loadLabeledImages() {
+  labeledDescriptors = [];
+
+  for (const label in fileIds) {
+    const imgUrl = fileIds[label]
+    try {
+      const img = await faceapi.fetchImage(imgUrl);
+      const detections = await faceapi
+        .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
+        .withFaceLandmarks()
+        .withFaceDescriptor();
+
+      if (detections) {
+        labeledDescriptors.push(
+          new faceapi.LabeledFaceDescriptors(label, [detections.descriptor])
+        );
+        console.log(`Loaded ${label}'s face`);
+      } else {
+        console.warn(`No face detected for ${label}`);
+      }
+    } catch (err) {
+      console.error(`Error loading image for ${label}:`, err);
+    }
+  }
+
+  console.log("Final labeledDescriptors:", labeledDescriptors);
+}
+
+startBtn.onclick = async () => {
+  if (!labeledDescriptors || labeledDescriptors.length === 0) {
+    alert("No labeled faces loaded! Cannot start camera.");
+    return;
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    video.srcObject = stream;
+    await video.play();
+    statusEl.textContent = "🎥 Camera started — detecting faces...";
+
+    const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
+
+    setInterval(async () => {
+      const detections = await faceapi
+        .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
+        .withFaceLandmarks()
+        .withFaceDescriptors();
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      faceapi.matchDimensions(canvas, { width: video.width, height: video.height });
+
+      const resized = faceapi.resizeResults(detections, {
+        width: video.width,
+        height: video.height
+      });
+
+      const results = resized.map(d => faceMatcher.findBestMatch(d.descriptor));
+      results.forEach((result, i) => {
+        const box = resized[i].detection.box;
+        const drawBox = new faceapi.draw.DrawBox(box, { label: result.toString() });
+        drawBox.draw(canvas);
+      });
+    }, 1000);
+  } catch (err) {
+    statusEl.textContent = "⚠️ Camera error: " + err.message;
+    console.error(err);
+  }
+};
+
+window.addEventListener("load", loadModels);
+</script>
+</body>
+</html>
