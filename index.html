@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -36,127 +38,151 @@
   <canvas id="overlay" width="320" height="240"></canvas>
 
   <script>
-  const statusEl = document.getElementById("status");
-  const startBtn = document.getElementById("start");
-  const video = document.getElementById("video");
-  const canvas = document.getElementById("overlay");
-  const ctx = canvas.getContext("2d");
-  let labeledDescriptors = [];
+    const statusEl = document.getElementById("status");
+    const startBtn = document.getElementById("start");
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("overlay");
+    const ctx = canvas.getContext("2d");
+    let labeledDescriptors = [];
 
-  // ✅ Folders
-  const MODEL_URL = "./model/weights/";
-  const IMAGE_PATH = "./images/";
-  const SHEET_URL = "https://script.google.com/macros/s/AKfycbwg8S9MsAasSRsi-f_pH5wG-xVZylniONqshznzKCc2B2g33DkSCPmC31Yonmzoh8c/exec";
+    // ✅ Path to your model and image folders
+    const MODEL_URL = "./model/weights/";
+    const IMAGE_PATH = "./images/"; // your images folder
 
-  // ✅ Send recognized face info to Google Sheet
-  async function sendToSheet(employeeId, fullName, imageLink) {
-    const data = { employeeId, fullName, imageLink };
+    // ✅ Function to send recognition data to Google Sheet
+    async function sendToSheet(employeeId, fullName, imageLink) {
+      const SHEET_URL = "https://script.google.com/macros/s/AKfycbwg8S9MsAasSRsi-f_pH5wG-xVZylniONqshznzKCc2B2g33DkSCPmC31Yonmzoh8c/exec"; // 🔗 Replace with your Apps Script Web App URL
 
-    try {
-      await fetch(SHEET_URL, {
-        method: "POST",
-        body: JSON.stringify(data),
-        headers: { "Content-Type": "application/json" },
-      });
-      console.log("✅ Sent to Google Sheet:", data);
-    } catch (err) {
-      console.error("❌ Error sending to sheet:", err);
-    }
-  }
+      const data = {
+        employeeId,
+        fullName,
+        imageLink
+      };
 
-  // ✅ Load models
-  async function loadModels() {
-    statusEl.textContent = "⏳ Loading models...";
-    await Promise.all([
-      faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-      faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-      faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-    ]);
-    statusEl.textContent = "✅ Models loaded. Click 'Start Camera'.";
-    startBtn.disabled = false;
-  }
-
-  // ✅ Load all known employee images automatically
-  async function loadAllLabeledImages() {
-    const employeeNames = [
-      "Steve Adedayo",
-      "Ikata Kenoye",
-      "Jane Doe",
-      "John Paul"
-      // 👉 Add all employee names here (must match .jpg filenames)
-    ];
-
-    for (const name of employeeNames) {
       try {
-        const img = await faceapi.fetchImage(`${IMAGE_PATH}${name}.jpg`);
-        const detection = await faceapi
+        await fetch(SHEET_URL, {
+          method: "POST",
+          body: JSON.stringify(data),
+          headers: { "Content-Type": "application/json" },
+        });
+        console.log("✅ Data sent to Google Sheet");
+      } catch (err) {
+        console.error("❌ Error sending to sheet:", err);
+      }
+    }
+
+    // ✅ Load face-api.js models first
+    async function loadModels() {
+      try {
+        statusEl.textContent = "⏳ Loading models...";
+
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+        ]);
+
+        statusEl.textContent = "✅ Models loaded — enter your name and start camera.";
+        startBtn.disabled = false;
+      } catch (err) {
+        statusEl.textContent = "❌ Model load error: " + err.message;
+        console.error(err);
+      }
+    }
+
+    // ✅ Load the user's image based on the name typed
+    async function loadLabeledImage(fullName) {
+      labeledDescriptors = [];
+      const imageName = fullName.trim(); 
+      const imgUrl = `${IMAGE_PATH}${imageName}.jpg`;
+
+      try {
+        const img = await faceapi.fetchImage(imgUrl);
+        const detections = await faceapi
           .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
           .withFaceLandmarks()
           .withFaceDescriptor();
-        if (detection) {
-          labeledDescriptors.push(new faceapi.LabeledFaceDescriptors(name, [detection.descriptor]));
-          console.log(`✅ Loaded face for ${name}`);
+
+        if (detections) {
+          labeledDescriptors.push(
+            new faceapi.LabeledFaceDescriptors(fullName, [detections.descriptor])
+          );
+          console.log(`✅ Loaded ${fullName}'s face`);
         } else {
-          console.warn(`⚠️ No face detected for ${name}`);
+          console.warn(`⚠️ No face detected for ${fullName}`);
         }
       } catch (err) {
-        console.warn(`⚠️ Could not load ${name}:`, err);
+        console.error(`Error loading image for ${fullName}:`, err);
+        alert(`❌ Could not load image for "${fullName}". Make sure ${imageName}.jpg exists in /images folder.`);
       }
     }
-  }
 
-  // ✅ Start camera & recognition
-  startBtn.onclick = async () => {
-    const employeeId = document.getElementById("employeeId").value.trim();
-    if (!employeeId) {
-      alert("Please enter Employee ID before starting.");
-      return;
-    }
+    // ✅ Start camera and recognition
+    startBtn.onclick = async () => {
+      const fullName = document.getElementById("fullName").value.trim();
+      const employeeId = document.getElementById("employeeId").value.trim();
 
-    await loadAllLabeledImages();
-    if (labeledDescriptors.length === 0) {
-      alert("No known faces loaded!");
-      return;
-    }
+      if (!fullName || !employeeId) {
+        alert("Please enter both Employee ID and Full Name before starting.");
+        return;
+      }
 
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    video.srcObject = stream;
-    await video.play();
+      await loadLabeledImage(fullName);
+      if (!labeledDescriptors || labeledDescriptors.length === 0) {
+        alert("No labeled face loaded! Check image name or path.");
+        return;
+      }
 
-    statusEl.textContent = "🎥 Camera started. Detecting faces...";
-    const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+        await video.play();
+        statusEl.textContent = "🎥 Camera started — detecting faces...";
 
-    setInterval(async () => {
-      const detections = await faceapi
-        .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
-        .withFaceLandmarks()
-        .withFaceDescriptors();
+        const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      faceapi.matchDimensions(canvas, { width: video.width, height: video.height });
-      const resized = faceapi.resizeResults(detections, { width: video.width, height: video.height });
+        setInterval(async () => {
+          const detections = await faceapi
+            .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
+            .withFaceLandmarks()
+            .withFaceDescriptors();
 
-      const results = resized.map(d => faceMatcher.findBestMatch(d.descriptor));
-      results.forEach(async (match, i) => {
-        const box = resized[i].detection.box;
-        const drawBox = new faceapi.draw.DrawBox(box, { label: match.toString() });
-        drawBox.draw(canvas);
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          faceapi.matchDimensions(canvas, { width: video.width, height: video.height });
 
-        if (match.label !== "unknown") {
-          const recognizedName = match.label;
-          const imageLink = `${location.origin}/images/${recognizedName}.jpg`;
-          statusEl.textContent = `✅ Recognized: ${recognizedName}`;
-          await sendToSheet(employeeId, recognizedName, imageLink);
-        } else {
-          statusEl.textContent = "❌ No known face detected.";
-        }
-      });
-    }, 1000);
-  };
+          const resized = faceapi.resizeResults(detections, {
+            width: video.width,
+            height: video.height
+          });
 
-  window.addEventListener("load", loadModels);
-</script>
+          const results = resized.map(d => faceMatcher.findBestMatch(d.descriptor));
 
+          // ✅ Modified loop: Send recognized data to Google Sheet
+          results.forEach(async (result, i) => {
+            const box = resized[i].detection.box;
+            const label = result.toString();
+            const drawBox = new faceapi.draw.DrawBox(box, { label });
+            drawBox.draw(canvas);
+
+            if (!label.includes("unknown")) {
+              const imageLink  = `${location.origin}/images/${fullName}.jpg`;
+              statusEl.textContent = `✅ Face recognized: ${fullName}`;
+              await sendToSheet(employeeId, fullName, imageLink);
+            }
+          });
+        }, 1000);
+      } catch (err) {
+        statusEl.textContent = "⚠️ Camera error: " + err.message;
+        console.error(err);
+      }
+    };
+
+    window.addEventListener("load", loadModels);
+  </script>
 </body>
 </html>
+
+
+
+
 
