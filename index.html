@@ -179,7 +179,9 @@
               // 🔹 Stop camera and redirect
               const tracks = video.srcObject.getTracks();
               tracks.forEach(track => track.stop());
-              window.location.href = "succcess.html"; // ✅ put your success page link here
+              setTimeout() => {
+                 window.location.href = "succcess.html"; // ✅ put your success page link here 
+              }, 60000);
             }
           } else {
             // ❌ No match found
@@ -189,7 +191,9 @@
               updateStatus(`❌ Face does not match stored photo for "${fullName}"`);
               const tracks = video.srcObject.getTracks();
               tracks.forEach(track => track.stop());
-              window.location.href = "./fail.html"; // ❌ put your no-match page link here
+              setTimeout() => {
+                   window.location.href = "./fail.html"; // ❌ put your no-match page link here 
+              }, 60000);
             }
           }
         });
@@ -205,4 +209,5 @@
 
 </body>
 </html>
+
 
