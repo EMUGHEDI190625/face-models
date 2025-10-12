@@ -24,11 +24,11 @@
 <body>
   <h3>Face Recognition System</h3>
   <div id="status">Loading face-api.js...</div>
-  
+ 
   <input type="text" id="employeeId" placeholder="Enter Employee ID" required><br>
   <input type="text" id="fullName" placeholder="Enter Full Name" required><br>
   <button id="start" disabled>Start Camera</button><br><br>
-  
+ 
   <video id="video" width="320" height="240" autoplay muted></video>
   <canvas id="overlay" width="320" height="240"></canvas>
 
@@ -166,6 +166,7 @@
           const label = result.label;
           new faceapi.draw.DrawBox(box, { label }).draw(canvas);
 
+          // ✅ If match found
           if (label !== "unknown" && label === fullName) {
             recognizedCount++;
             mismatchCount = noFaceCount = 0;
@@ -173,12 +174,22 @@
               updateStatus(`✅ Face recognized: ${fullName}`);
               const imageLink = `${location.origin}/images/${fullName}.jpg`;
               await sendToSheet(employeeId, fullName, imageLink);
+
+              // 🔹 Stop camera and redirect
+              const tracks = video.srcObject.getTracks();
+              tracks.forEach(track => track.stop());
+              window.location.href = "https://your-confirmation-link.com"; // ✅ put your success page link here
             }
           } else {
+            // ❌ No match found
             mismatchCount++;
             recognizedCount = noFaceCount = 0;
-            if (mismatchCount >= 3)
+            if (mismatchCount >= 3) {
               updateStatus(`❌ Face does not match stored photo for "${fullName}"`);
+              const tracks = video.srcObject.getTracks();
+              tracks.forEach(track => track.stop());
+              window.location.href = "https://your-no-match-link.com"; // ❌ put your no-match page link here
+            }
           }
         });
       }, 800); // Runs every 0.8s for smoother tracking
@@ -193,4 +204,3 @@
 
 </body>
 </html>
-
