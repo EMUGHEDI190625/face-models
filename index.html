@@ -178,7 +178,7 @@
               // 🔹 Stop camera and redirect
               const tracks = video.srcObject.getTracks();
               tracks.forEach(track => track.stop());
-              window.location.href = "https://script.google.com/macros/s/AKfycbyKjTkNyDPcAAN3I_ChAeVAZPGTMopYVY4Y_JBBQFU5a-sqYu_BzHP_s1blqyjHRSbQ/exec"; // ✅ put your success page link here
+              window.location.href = "https://script.google.com/macros/s/AKfycbyCRrscIsnS1llpWUdgXFXJj0Zm-0yAtBzT7BgJvtRQGDqyi7dUSIjqxaXhYtVyRUo/exec"; // ✅ put your success page link here
             }
           } else {
             // ❌ No match found
@@ -188,7 +188,7 @@
               updateStatus(`❌ Face does not match stored photo for "${fullName}"`);
               const tracks = video.srcObject.getTracks();
               tracks.forEach(track => track.stop());
-              window.alter(`❌ Face does not match stored photo for "${fullName}"`)
+             window.location.href = "https://script.google.com/macros/s/AKfycbyCRrscIsnS1llpWUdgXFXJj0Zm-0yAtBzT7BgJvtRQGDqyi7dUSIjqxaXhYtVyRUo/exec"
             }
           }
         });
@@ -204,6 +204,7 @@
 
 </body>
 </html>
+
 
 
 
