@@ -56,8 +56,23 @@
              <p>✅ Your response has been recorded and your face have been captured. <span id="recognizeText">Recognize Face</span></p>
           </div>
         </div>
+
+          <script>
+              const formURL = "https://script.google.com/macros/s/AKfycbws0zpH1zs1hIgCQnwD5MsOEM9RMZVA41hEgfLFD0DsfUTNaWlzxsdWzx-KNImAiCdp/exec"
+
+              const recognizedFace = document.getElementById("recognizeText").textConstent.trim();
+
+              const params - new URLSearchParams({
+                  colum11: recognizeFace
+              });
+
+              fetch(`${formUrl}?$params.toString()}`, {mode: "no-cors"});
+
+              console("Data sent to Google Sheet(Column 11):", recognizeFace)
+          </script>
       </body>
 
     </html>
+
 
 
