@@ -178,7 +178,7 @@
               // 🔹 Stop camera and redirect
               const tracks = video.srcObject.getTracks();
               tracks.forEach(track => track.stop());
-              window.location.href = "https://script.google.com/macros/s/AKfycbws0zpH1zs1hIgCQnwD5MsOEM9RMZVA41hEgfLFD0DsfUTNaWlzxsdWzx-KNImAiCdp/exec"; // ✅ put your success page link here
+              window.location.href = "./success.html; // ✅ put your success page link here
             }
           } else {
             // ❌ No match found
@@ -188,7 +188,7 @@
               updateStatus(`❌ Face does not match stored photo for "${fullName}"`);
               const tracks = video.srcObject.getTracks();
               tracks.forEach(track => track.stop());
-             window.location.href = "https://script.google.com/macros/s/AKfycbws0zpH1zs1hIgCQnwD5MsOEM9RMZVA41hEgfLFD0DsfUTNaWlzxsdWzx-KNImAiCdp/exec"
+             window.location.href = "./fail.html"
             }
           }
         });
@@ -204,6 +204,7 @@
 
 </body>
 </html>
+
 
 
 
