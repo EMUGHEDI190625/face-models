@@ -24,11 +24,11 @@
 <body>
   <h3>Face Recognition System</h3>
   <div id="status">⏳ Loading system...</div>
- 
+
   <input type="text" id="employeeId" placeholder="Enter Employee ID" required><br>
   <input type="text" id="fullName" placeholder="Enter Full Name" required><br>
   <button id="start" disabled>Start Camera</button><br><br>
- 
+
   <video id="video" width="320" height="240" autoplay muted></video>
   <canvas id="overlay" width="320" height="240"></canvas>
 
@@ -40,32 +40,33 @@
   const ctx = canvas.getContext("2d");
 
   let labeledDescriptors = [];
-  const MODEL_URL = "./model/weights/";   // ✅ confirm folder exists
-  const IMAGE_PATH = "./images/";         // ✅ confirm folder exists
+  const MODEL_URL = "./model/weights/";   // make sure this folder exists
+  const IMAGE_PATH = "./images/";         // make sure this folder exists
 
-  // Stability counters
+  // Counters for stability
   let recognizedCount = 0;
   let noFaceCount = 0;
   let mismatchCount = 0;
   let currentStatus = "";
 
   // ✅ Send recognized data to Google Sheet
-  async function sendToSheet(employeeId, fullName, imageLink) {
+  async function sendToSheet(employeeId, fullName, imageLink, recognizeFace) {
     const SHEET_URL = "https://script.google.com/macros/s/AKfycbxqeviMx1jgeuEhC1c7u24zlx6pZprVB3eUm2YwnBgVSzH54bOFaWCgsmKicrydVW6q/exec";
-    const status = "Face recognized";
+    const status = recognizeFace === "Recognized" ? "Face recognized" : "Face not recognized";
     const source = "Face Recognition System";
 
     const params = new URLSearchParams({
       employeeId,
-      name: fullName,
+      fullName,
       imageLink,
-      status,   // ✅ removed extra period
+      recognizeFace, // 👈 goes into column 11
+      status,
       source
     });
 
     try {
-      await fetch(`${SHEET_URL}?${params.toString()}`);
-      console.log("✅ Data sent to Google Sheet");
+      await fetch(`${SHEET_URL}?${params.toString()}`, { method: "GET" });
+      console.log("✅ Data sent to Google Sheet:", recognizeFace);
     } catch (err) {
       console.error("❌ Error sending to sheet:", err);
     }
@@ -81,7 +82,7 @@
         faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
       ]);
       statusEl.textContent = "✅ Models loaded — enter details and start camera.";
-      startBtn.disabled = false; // enable button after models load
+      startBtn.disabled = false;
     } catch (err) {
       statusEl.textContent = "❌ Model load error: " + err.message;
       console.error(err);
@@ -93,14 +94,18 @@
     labeledDescriptors = [];
     const fileName = fullName.trim();
     const imgUrl = `${IMAGE_PATH}${fileName}.jpg`;
+
     try {
       const img = await faceapi.fetchImage(imgUrl);
       const detection = await faceapi
         .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
         .withFaceLandmarks()
         .withFaceDescriptor();
+
       if (detection) {
-        labeledDescriptors.push(new faceapi.LabeledFaceDescriptors(fullName, [detection.descriptor]));
+        labeledDescriptors.push(
+          new faceapi.LabeledFaceDescriptors(fullName, [detection.descriptor])
+        );
         console.log(`✅ Loaded stored photo for: ${fullName}`);
       } else {
         alert(`⚠️ No face detected in stored photo for ${fullName}`);
@@ -177,7 +182,8 @@
             if (recognizedCount >= 3) {
               updateStatus(`✅ Face recognized: ${fullName}`);
               const imageLink = `${location.origin}/images/${fullName}.jpg`;
-              await sendToSheet(employeeId, fullName, imageLink);
+              await sendToSheet(employeeId, fullName, imageLink, "Recognized");
+
               const tracks = video.srcObject.getTracks();
               tracks.forEach(track => track.stop());
               setTimeout(() => {
@@ -189,6 +195,9 @@
             recognizedCount = noFaceCount = 0;
             if (mismatchCount >= 3) {
               updateStatus(`❌ Face does not match stored photo for "${fullName}"`);
+              const imageLink = `${location.origin}/images/${fullName}.jpg`;
+              await sendToSheet(employeeId, fullName, imageLink, "Not Recognized");
+
               const tracks = video.srcObject.getTracks();
               tracks.forEach(track => track.stop());
               setTimeout(() => {
