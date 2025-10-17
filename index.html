@@ -24,11 +24,11 @@
 <body>
   <h3>Face Recognition System</h3>
   <div id="status">⏳ Loading system...</div>
-
+ 
   <input type="text" id="employeeId" placeholder="Enter Employee ID" required><br>
   <input type="text" id="fullName" placeholder="Enter Full Name" required><br>
   <button id="start" disabled>Start Camera</button><br><br>
-
+ 
   <video id="video" width="320" height="240" autoplay muted></video>
   <canvas id="overlay" width="320" height="240"></canvas>
 
@@ -43,30 +43,23 @@
   const MODEL_URL = "./model/weights/";   // make sure this folder exists
   const IMAGE_PATH = "./images/";         // make sure this folder exists
 
-  // Counters for stability
+  // Stability counters
   let recognizedCount = 0;
   let noFaceCount = 0;
   let mismatchCount = 0;
   let currentStatus = "";
 
   // ✅ Send recognized data to Google Sheet
-  async function sendToSheet(employeeId, fullName, imageLink, recognizeFace) {
-    const SHEET_URL = "https://script.google.com/macros/s/AKfycbz8VEPRhwey4li9YoJBQif0kIxh8ileWgwddimkYkDkgi3_T5kq-wydgLtCe1E2kboT/exec";
-    const status = recognizeFace === "Recognized" ? "Face recognized" : "Face not recognized";
-    const source = "Face Recognition System";
-
-    const params = new URLSearchParams({
-      employeeId,
-      fullName,
-      imageLink,
-      recognizeFace, // 👈 goes into column 11
-      status,
-      source
-    });
-
+  async function sendToSheet(employeeId, fullName, imageLink) {
+    const SHEET_URL = "https://script.google.com/macros/s/AKfycbwg8S9MsAasSRsi-f_pH5wG-xVZylniONqshznzKCc2B2g33DkSCPmC31Yonmzoh8c/exec";
+    const data = { employeeId, fullName, imageLink };
     try {
-      await fetch(`${SHEET_URL}?${params.toString()}`, { method: "GET" });
-      console.log("✅ Data sent to Google Sheet:", recognizeFace);
+      await fetch(SHEET_URL, {
+        method: "POST",
+        body: JSON.stringify(data),
+        headers: { "Content-Type": "application/json" },
+      });
+      console.log("✅ Data sent to Google Sheet");
     } catch (err) {
       console.error("❌ Error sending to sheet:", err);
     }
@@ -82,7 +75,7 @@
         faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
       ]);
       statusEl.textContent = "✅ Models loaded — enter details and start camera.";
-      startBtn.disabled = false;
+      startBtn.disabled = false; // enable button after models load
     } catch (err) {
       statusEl.textContent = "❌ Model load error: " + err.message;
       console.error(err);
@@ -94,18 +87,14 @@
     labeledDescriptors = [];
     const fileName = fullName.trim();
     const imgUrl = `${IMAGE_PATH}${fileName}.jpg`;
-
     try {
       const img = await faceapi.fetchImage(imgUrl);
       const detection = await faceapi
         .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
         .withFaceLandmarks()
         .withFaceDescriptor();
-
       if (detection) {
-        labeledDescriptors.push(
-          new faceapi.LabeledFaceDescriptors(fullName, [detection.descriptor])
-        );
+        labeledDescriptors.push(new faceapi.LabeledFaceDescriptors(fullName, [detection.descriptor]));
         console.log(`✅ Loaded stored photo for: ${fullName}`);
       } else {
         alert(`⚠️ No face detected in stored photo for ${fullName}`);
@@ -162,6 +151,7 @@
           height: video.height
         });
 
+        // --- Stability logic ---
         if (resized.length === 0) {
           noFaceCount++;
           recognizedCount = mismatchCount = 0;
@@ -176,48 +166,37 @@
           const label = result.label;
           new faceapi.draw.DrawBox(box, { label }).draw(canvas);
 
+          // ✅ If match found
           if (label !== "unknown" && label === fullName) {
             recognizedCount++;
             mismatchCount = noFaceCount = 0;
             if (recognizedCount >= 3) {
               updateStatus(`✅ Face recognized: ${fullName}`);
               const imageLink = `${location.origin}/images/${fullName}.jpg`;
-              await sendToSheet(employeeId, fullName, imageLink, "Recognized");
+              await sendToSheet(employeeId, fullName, imageLink);
 
+              // 🔹 Stop camera and redirect after 1 minute
               const tracks = video.srcObject.getTracks();
               tracks.forEach(track => track.stop());
-
-              // ✅ Redirect to success page first, then attendance system
               setTimeout(() => {
-                window.location.href = "./success.html";
-
-                // ⏳ Wait 3 seconds on success page before going to attendance system
-                setTimeout(() => {
-                  window.location.href = "https://script.google.com/macros/s/AKfycbz0NIZGihXqP2A63yAjF4D5UR0NnOAbZETpPWpKBHRqO5oqy4KeQAIEkRBySTo_N1Bh/exec";
-                }, 3000);
-              }, 1000);
+                window.location.href = "./success.html"; // ✅ corrected syntax and file name
+              }, 1000); // redirect after 1 sec (change 1000 to 60000 for 1 min)
             }
           } else {
+            // ❌ No match found
             mismatchCount++;
             recognizedCount = noFaceCount = 0;
             if (mismatchCount >= 3) {
               updateStatus(`❌ Face does not match stored photo for "${fullName}"`);
-              const imageLink = `${location.origin}/images/${fullName}.jpg`;
-              await sendToSheet(employeeId, fullName, imageLink, "Not Recognized");
-
               const tracks = video.srcObject.getTracks();
               tracks.forEach(track => track.stop());
               setTimeout(() => {
-                window.location.href = "./fail.html";
-
-                setTimeout(() => {
-                  window.location.href = "https://script.google.com/macros/s/AKfycbz0NIZGihXqP2A63yAjF4D5UR0NnOAbZETpPWpKBHRqO5oqy4KeQAIEkRBySTo_N1Bh/exec";
-                }, 3000);
+                window.location.href = "./fail.html"; // ✅ corrected syntax
               }, 1000);
             }
           }
         });
-      }, 800);
+      }, 800); // Runs every 0.8s
     } catch (err) {
       updateStatus("⚠️ Camera error: " + err.message);
       console.error(err);
