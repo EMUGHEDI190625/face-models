@@ -40,8 +40,8 @@
   const ctx = canvas.getContext("2d");
 
   let labeledDescriptors = [];
-  const MODEL_URL = "./model/weights/";   // make sure this folder exists
-  const IMAGE_PATH = "./images/";         // make sure this folder exists
+  const MODEL_URL = "./model/weights/";   // ✅ confirm folder exists
+  const IMAGE_PATH = "./images/";         // ✅ confirm folder exists
 
   // Stability counters
   let recognizedCount = 0;
@@ -59,7 +59,7 @@
       employeeId,
       name: fullName,
       imageLink,
-      status,.
+      status,   // ✅ removed extra period
       source
     });
 
@@ -157,7 +157,6 @@
           height: video.height
         });
 
-        // --- Stability logic ---
         if (resized.length === 0) {
           noFaceCount++;
           recognizedCount = mismatchCount = 0;
@@ -172,7 +171,6 @@
           const label = result.label;
           new faceapi.draw.DrawBox(box, { label }).draw(canvas);
 
-          // ✅ If match found
           if (label !== "unknown" && label === fullName) {
             recognizedCount++;
             mismatchCount = noFaceCount = 0;
@@ -180,8 +178,6 @@
               updateStatus(`✅ Face recognized: ${fullName}`);
               const imageLink = `${location.origin}/images/${fullName}.jpg`;
               await sendToSheet(employeeId, fullName, imageLink);
-
-              // 🔹 Stop camera and redirect after 1 second
               const tracks = video.srcObject.getTracks();
               tracks.forEach(track => track.stop());
               setTimeout(() => {
@@ -189,7 +185,6 @@
               }, 1000);
             }
           } else {
-            // ❌ No match found
             mismatchCount++;
             recognizedCount = noFaceCount = 0;
             if (mismatchCount >= 3) {
@@ -202,7 +197,7 @@
             }
           }
         });
-      }, 800); // Runs every 0.8s
+      }, 800);
     } catch (err) {
       updateStatus("⚠️ Camera error: " + err.message);
       console.error(err);
@@ -214,7 +209,3 @@
 
 </body>
 </html>
-
-
-
-
