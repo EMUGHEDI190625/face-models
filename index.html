@@ -51,7 +51,7 @@
 
   // ✅ Send recognized data to Google Sheet
   async function sendToSheet(employeeId, fullName, imageLink, recognizeFace) {
-    const SHEET_URL = "https://script.google.com/macros/s/AKfycbxqeviMx1jgeuEhC1c7u24zlx6pZprVB3eUm2YwnBgVSzH54bOFaWCgsmKicrydVW6q/exec";
+    const SHEET_URL = "https://script.google.com/macros/s/AKfycbz8VEPRhwey4li9YoJBQif0kIxh8ileWgwddimkYkDkgi3_T5kq-wydgLtCe1E2kboT/exec";
     const status = recognizeFace === "Recognized" ? "Face recognized" : "Face not recognized";
     const source = "Face Recognition System";
 
@@ -218,3 +218,4 @@
 
 </body>
 </html>
+
