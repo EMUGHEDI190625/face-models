@@ -50,7 +50,7 @@
   let currentStatus = "";
 
   // ✅ Send recognized data to Google Sheet
-  async function sendToSheet(employeeId, fullName, imageLink) {
+  async function sendToSheet(employeeId, recognizedFace, imageLink) {
     const SHEET_URL = "https://script.google.com/macros/s/AKfycbzulEN29ZnsR-n6nyAOye19VajAhzYPUMzfHBPSH-dBA3X0w-Bfa7WuaUzddBHv38r0/exec";
     const data = { employeeId, fullName, imageLink };
     try {
@@ -208,6 +208,7 @@
 
 </body>
 </html>
+
 
 
 
