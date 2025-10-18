@@ -51,7 +51,7 @@
 
   // ✅ Send recognized data to Google Sheet
   async function sendToSheet(employeeId, fullName, imageLink) {
-    const SHEET_URL = "https://script.google.com/macros/s/AKfycbwCd4isYX2ZN5wTRMgJV_1-52g-lZ4wSw5K0BKryt0wVmu8k3_TaxYyCaEv9vGGL-Pp/exec";
+    const SHEET_URL = "https://script.google.com/macros/s/AKfycbzulEN29ZnsR-n6nyAOye19VajAhzYPUMzfHBPSH-dBA3X0w-Bfa7WuaUzddBHv38r0/exec";
     const data = { employeeId, fullName, imageLink };
     try {
       await fetch(SHEET_URL, {
@@ -208,5 +208,6 @@
 
 </body>
 </html>
+
 
 
