@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -40,32 +41,34 @@
   const ctx = canvas.getContext("2d");
 
   let labeledDescriptors = [];
-  const MODEL_URL = "./model/weights/";   // make sure this folder exists
-  const IMAGE_PATH = "./images/";         // make sure this folder exists
+  const MODEL_URL = "./model/weights/";
+  const IMAGE_PATH = "./images/";
 
-  // Stability counters
   let recognizedCount = 0;
   let noFaceCount = 0;
   let mismatchCount = 0;
   let currentStatus = "";
 
-  // ✅ Send recognized data to Google Sheet
-  async function sendToSheet(employeeId, recognizedFace, imageLink) {
-    const SHEET_URL = "https://script.google.com/macros/s/AKfycbzulEN29ZnsR-n6nyAOye19VajAhzYPUMzfHBPSH-dBA3X0w-Bfa7WuaUzddBHv38r0/exec";
-    const data = { employeeId, recognizedFace, imageLink };
+  // ✅ Send recognized or unrecognized data to Google Sheet
+  async function sendToSheet(employeeId, fullName, imageLink) {
+    const SHEET_URL = "https://script.google.com/macros/s/AKfycbxvAQ_4ae3NDQjCkfX0OJyQGNr5oolu9t4C0Ms60XOq3NeOeOV0Z9yKRu4QHlLbRA5_qg/exec";
+    const params = new URLSearchParams({
+      employeeId: employeeId,
+      name: fullName,
+      imageLink: imageLink,
+      recognizeFace: imageLink && imageLink.includes("_not_recognized") ? "Face not recognized" : "Face recognized",
+      source: "FaceRecognition"
+    });
+
     try {
-      await fetch(SHEET_URL, {
-        method: "POST",
-        body: JSON.stringify(data),
-        headers: { "Content-Type": "application/json" },
-      });
-      console.log("✅ Data sent to Google Sheet");
+      const response = await fetch(`${SHEET_URL}?${params.toString()}`);
+      const text = await response.text();
+      console.log("✅ Sheet response:", text);
     } catch (err) {
       console.error("❌ Error sending to sheet:", err);
     }
   }
 
-  // ✅ Load face-api.js models
   async function loadModels() {
     try {
       statusEl.textContent = "⏳ Loading models...";
@@ -75,14 +78,13 @@
         faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
       ]);
       statusEl.textContent = "✅ Models loaded — enter details and start camera.";
-      startBtn.disabled = false; // enable button after models load
+      startBtn.disabled = false;
     } catch (err) {
       statusEl.textContent = "❌ Model load error: " + err.message;
       console.error(err);
     }
   }
 
-  // ✅ Load one stored face image based on full name
   async function loadLabeledImage(fullName) {
     labeledDescriptors = [];
     const fileName = fullName.trim();
@@ -105,7 +107,6 @@
     }
   }
 
-  // ✅ Helper function to show stable messages
   function updateStatus(newStatus) {
     if (currentStatus !== newStatus) {
       statusEl.textContent = newStatus;
@@ -114,7 +115,6 @@
     }
   }
 
-  // ✅ Start camera and detect face
   startBtn.onclick = async () => {
     const employeeId = document.getElementById("employeeId").value.trim();
     const fullName = document.getElementById("fullName").value.trim();
@@ -151,7 +151,6 @@
           height: video.height
         });
 
-        // --- Stability logic ---
         if (resized.length === 0) {
           noFaceCount++;
           recognizedCount = mismatchCount = 0;
@@ -166,38 +165,34 @@
           const label = result.label;
           new faceapi.draw.DrawBox(box, { label }).draw(canvas);
 
-          // ✅ If match found
+          const githubImageLink = `https://raw.githubusercontent.com/EMUGHEDI190625/face-models/main/images/${fullName}.jpg`;
+
           if (label !== "unknown" && label === fullName) {
             recognizedCount++;
             mismatchCount = noFaceCount = 0;
             if (recognizedCount >= 3) {
               updateStatus(`✅ Face recognized: ${fullName}`);
-              const imageLink = `${location.origin}/images/${fullName}.jpg`;
-              await sendToSheet(employeeId, fullName, imageLink);
-
-              // 🔹 Stop camera and redirect after 1 minute
+              await sendToSheet(employeeId, fullName, githubImageLink);
               const tracks = video.srcObject.getTracks();
               tracks.forEach(track => track.stop());
-              setTimeout(() => {
-                window.location.href = "./success.html"; // ✅ corrected syntax and file name
-              }, 1000); // redirect after 1 sec (change 1000 to 60000 for 1 min)
+              setTimeout(() => { window.location.href = "./success.html"; }, 1000);
             }
           } else {
-            // ❌ No match found
             mismatchCount++;
             recognizedCount = noFaceCount = 0;
             if (mismatchCount >= 3) {
               updateStatus(`❌ Face does not match stored photo for "${fullName}"`);
+              // Log failure to Google Sheet
+              await sendToSheet(employeeId, fullName, githubImageLink.replace(".jpg", "_not_recognized.jpg"));
               const tracks = video.srcObject.getTracks();
               tracks.forEach(track => track.stop());
-              setTimeout(() => {
-                window.location.href = "./fail.html"; // ✅ corrected syntax
-              }, 1000);
+              setTimeout(() => { window.location.href = "./fail.html"; }, 1000);
             }
           }
         });
-      }, 800); // Runs every 0.8s
+      }, 800);
     } catch (err) {
+
       updateStatus("⚠️ Camera error: " + err.message);
       console.error(err);
     }
@@ -208,8 +203,3 @@
 
 </body>
 </html>
-
-
-
-
-
