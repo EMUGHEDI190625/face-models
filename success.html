@@ -1,4 +1,4 @@
-    <!DOCTYPE html>
+    <!-- <!DOCTYPE html>
     <html>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -77,3 +77,69 @@
 
     </html>
 
+ -->
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: Roboto, Arial, sans-serif;
+      background: #fff;
+      margin: 0;
+      padding: 0;
+      color: #202124;
+    }
+    .wrapper {
+      display: flex;
+      justify-content: center;
+      margin-top: 60px;
+    }
+    .container {
+      max-width: 640px;
+      width: 100%;
+      padding: 40px 32px;
+      border: 1px solid #dadce0;
+      border-radius: 8px;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <h1 style="text-align:center;">ECN Employees Attendance System</h1>
+
+      <img src="https://raw.githubusercontent.com/EMUGHEDI190625/face-models/main/images/ECN_logo.jpg"
+           alt="ECN Logo"
+           style="display:block; width:50%; margin:0 auto;">
+
+      <p>
+        ✅ Your response has been recorded and your face has been captured.
+        <br>
+        <strong id="recognizeText">Recognized</strong>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    const formURL =
+      "https://script.google.com/macros/s/AKfycbws0zpH1zs1hIgCQnwD5MsOEM9RMZVA41hEgfLFD0DsfUTNaWlzxsdWzx-KNImAiCdp/exec";
+
+    // Get recognition result from page
+    const recognizedFace =
+      document.getElementById("recognizeText").textContent.trim();
+
+    // Send data to Apps Script
+    const params = new URLSearchParams({
+      recognizeFace: recognizedFace
+    });
+
+    fetch(`${formURL}?${params.toString()}`, { mode: "no-cors" });
+
+    console.log("Data sent to Google Sheet:", recognizedFace);
+  </script>
+</body>
+</html>
