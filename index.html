@@ -1,9 +1,9 @@
-<!-- 
+
 <!DOCTYPE html>
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Face Recognition System</title>
+  <title>ECN Face Recognition System</title>
   <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
   <style>
     body {
@@ -23,7 +23,7 @@
   </style>
 </head>
 <body>
-  <h3>ECN Employees Facial Recognition System</h3>
+  <h3>ECN Facial Recognition System</h3>
    <img src="https://raw.githubusercontent.com/EMUGHEDI190625/face-models/main/images/ECN_logo.jpg" alt="ECN Logo" 
     styple="display:block; width: 50%">
   <div id="status">⏳ Loading system...</div>
@@ -53,7 +53,7 @@
 
   // ✅ Send recognized or unrecognized data to Google Sheet
   async function sendToSheet(employeeId, fullName, imageLink) {
-    const SHEET_URL = "https://docs.google.com/spreadsheets/d/1sPPmGuViB7HovIp8c9At4SfOxVdDibcVJ2IupgQpmOw/edit?resourcekey=&gid=1436034550#gid=1436034550";
+    const SHEET_URL = "https://script.google.com/macros/s/AKfycbyjgDPIy6oSJmxN0vX_UbgkIRna3pbTDKtzVQDyi9xutmnClMUSYQU2wn0Gsc6sT053jA/exec";
     const params = new URLSearchParams({
       employeeId: employeeId,
       name: fullName,
@@ -207,9 +207,9 @@
 </html>
 
 
- -->
 
-<!DOCTYPE html>
+
+<!-- <!DOCTYPE html>
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -488,3 +488,4 @@ checkAttendanceTime();
 </html>
 
 
+ -->
